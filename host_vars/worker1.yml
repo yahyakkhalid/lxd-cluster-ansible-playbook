@@ -1,0 +1,6 @@
+block_devices:
+- /dev/nvme1n1
+- /dev/nvme2n1
+# block_devices:
+#   the block device should be unmounted (example: /dev/sdb1).
+#   separate by commas if multiple (example: /dev/sdb1,/dev/sdb2,/dev/sdc1,/dev/sdc2).
