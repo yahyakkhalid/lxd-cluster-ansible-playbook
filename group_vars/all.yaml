@@ -1,9 +1,9 @@
-underlay_subnet=$SUBNET
-cluster_trust_password=$PASSWORD
-storage_pool_name=$ZFS_POOL_NAME
-zpool_compression=$COMPRESSION_TYPE
-zpool_type=$ZPOOL_TYPE
-zpool_permissions=$ZPOOL_PERMS
+underlay_subnet: $SUBNET
+cluster_trust_password: $PASSWORD
+storage_pool_name: $ZFS_POOL_NAME
+zpool_compression: $COMPRESSION_TYPE
+zpool_type: $ZPOOL_TYPE
+zpool_permissions: $ZPOOL_PERMS
 # underlay_subnet:
 #	  default: auto.
 #	  if an error occurs, put the fan underlay subnet manually here (example: 172.31.0.0/16).
