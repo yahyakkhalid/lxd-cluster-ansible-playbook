@@ -1,0 +1,17 @@
+underlay_subnet=$SUBNET
+cluster_trust_password=$PASSWORD
+storage_pool_name=$ZFS_POOL_NAME
+zpool_compression=$COMPRESSION_TYPE
+zpool_type=$ZPOOL_TYPE
+zpool_permissions=$ZPOOL_PERMS
+# underlay_subnet:
+#	  default: auto.
+#	  if an error occurs, put the fan underlay subnet manually here (example: 172.31.0.0/16).
+# zpool_compression:
+#   compression type (example: gzip).
+# zpool_type:
+#   types of pools (example: mirror), leave blank if RAID0 (striped).
+#   visit https://wiki.ubuntu.com/Kernel/Reference/ZFS.
+# zpool_permissions:
+#   zpool permissions (example: create,destroy,mount,mountpoint,snapshot,send,receive,rollback).
+#   leave blank for default.

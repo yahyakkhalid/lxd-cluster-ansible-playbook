@@ -1,0 +1,141 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Get hostname
+      shell: uname -n
+      register: hostname
+
+    - name: Debian-based systems
+      block:
+        - name: Install snap
+          apt:
+            name: snapd
+            state: present
+
+        - name: Install zfs utilities
+          apt:
+            name: zfsutils-linux
+            state: present
+      when: ansible_os_family == "Debian"
+    
+    - name: RedHat-based systems
+      block:
+        - name: Add EPEL
+          yum:
+            name: epel-release
+            state: present
+
+        - name: Install snap
+          yum:
+            name: snapd
+            state: present
+
+        - name: Install zfs utilities
+          yum:
+            name: zfs
+            state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Load zfs
+      command: modprobe zfs
+
+    - name: Enable snap socket
+      systemd:
+        name: snapd.socket
+        state: started
+        enabled: yes
+
+    - name: Install LXD
+      snap:
+        name: lxd
+        state: present
+
+    - name: Enable LXD socket
+      systemd:
+        name: snap.lxd.daemon.unix.socket
+        state: started
+        enabled: yes
+
+    - name: Add user to LXD group
+      user:
+        name: "{{ ansible_ssh_user }}"
+        groups: lxd
+        append: yes
+
+    - name: Block devices
+      set_fact:
+        disks: "{{ block_devices | join(' ') }}"
+        cacheable: true
+
+- hosts: master
+  become: true
+  tasks:
+    - name: LXD info | To check if the machine is empty
+      command: lxc info
+      register: lxc_info_first
+      run_once: true
+      changed_when: false
+
+    - name: Master LXD init
+      block:
+        - name: Create zfs pool
+          command: zpool create -f {{ storage_pool_name }} {{ disks }} {{ zpool_type }} -O compression={{ zpool_compression }} -O secondarycache=all
+          args:
+            creates: /{{ storage_pool_name }}
+
+        - name: zfs permissions
+          command: zfs allow {{ ansible_ssh_user }} {{ zpool_permissions }} {{ storage_pool_name }}
+          when: zpool_permissions != ''
+
+        - name: Load LXD config
+          set_fact:
+            config: "{{ lookup('template', 'master_conf.yml.j2') }}"
+
+        - name: LXD init
+          command: lxd init --preseed <
+          args:
+            stdin: "{{ config }}"
+      when: "lxc_info_first.stdout.find('storage: \"\"') != -1"
+
+    - name: Broadcast the cluster's certificate to the workers
+      block:
+        - name: LXD info
+          command: lxc info
+          register: lxc_info
+          run_once: true
+          changed_when: false
+
+        - name: LXD info fact
+          set_fact:
+            cert_info: "{{ lxc_info.stdout | from_yaml }}"
+            cacheable: yes
+
+- hosts: workers
+  become: true
+  tasks:
+    - name: LXD info | To check if the machine is empty
+      command: lxc info
+      register: lxc_info
+      changed_when: false
+
+    - name: Worker LXD init
+      block:
+        - name: Create zfs pool
+          command: zpool create -f {{ storage_pool_name }} {{ disks }} {{ zpool_type }} -O compression={{ zpool_compression }} -O secondarycache=all
+          args:
+            creates: /{{ storage_pool_name }}
+
+        - name: zfs permissions
+          command: zfs allow {{ ansible_ssh_user }} {{ zpool_permissions }} {{ storage_pool_name }}
+          when: zpool_permissions != ''
+
+        - name: Load LXD config
+          set_fact:
+            config: "{{ lookup('template', 'worker_conf.yml.j2') }}"
+        
+        - name: LXD init
+          command: lxd init --preseed <
+          args:
+            stdin: "{{ config }}"
+      when: "lxc_info.stdout.find('storage: \"\"') != -1"
