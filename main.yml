@@ -35,10 +35,10 @@
           yum:
             name: zfs
             state: present
+            
+        - name: Load zfs
+          command: modprobe zfs
       when: ansible_os_family == "RedHat"
-
-    - name: Load zfs
-      command: modprobe zfs
 
     - name: Enable snap socket
       systemd:
